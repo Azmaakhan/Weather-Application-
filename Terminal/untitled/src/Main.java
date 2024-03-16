@@ -49,7 +49,6 @@ public class Main {
         }
     }
 
-
     ////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
     //////////////////////////////INIT//////////////////////////////
@@ -544,33 +543,99 @@ public class Main {
 
 
     static void showCurrentWeather() {
-        System.out.println("Showing current weather...");
+        System.out.println("To Check > Go To Check By Lat/Long > Check New Location...");
     }
 
+    /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
+
+
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////5-Day Weather Forecast//////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+
     static void showFiveDaysForecast() {
-        System.out.println("Showing 5 days forecast...");
+//        Scanner scanner = new Scanner(System.in);
+
+        try {
+            System.out.print("Enter latitude: ");
+            double lat = scanner.nextDouble();
+
+            System.out.print("Enter longitude: ");
+            double lon = scanner.nextDouble();
+
+//            scanner.close();
+
+            String apiKey = "10b4e9d130091b96f0775edc59e7ee11";
+            URL url = new URL("https://api.openweathermap.org/data/2.5/forecast?lat=" + lat + "&lon=" + lon + "&appid=" + apiKey);
+
+            Scanner apiScanner = new Scanner(url.openStream());
+            StringBuilder jsonBuilder = new StringBuilder();
+
+            while (apiScanner.hasNext()) {
+                jsonBuilder.append(apiScanner.nextLine());
+            }
+
+//            apiScanner.close();
+
+            JSONObject json = new JSONObject(jsonBuilder.toString());
+            JSONArray forecastList = json.getJSONArray("list");
+
+            System.out.println("Showing 5 days forecast for latitude: " + lat + ", longitude: " + lon);
+            System.out.println("------------------------------------------------------------------------------------------------------------------------------------");
+            System.out.printf("%-20s%-20s%-20s%-30s%-20s%-20s%n", "Date/Time", "Temperature (C)", "Weather", "Description", "Wind Speed (m/s)", "Clouds (%)");
+            System.out.println("------------------------------------------------------------------------------------------------------------------------------------");
+
+            for (int i = 0; i < forecastList.length(); i++) {
+                JSONObject forecast = forecastList.getJSONObject(i);
+                String dateTime = forecast.getString("dt_txt");
+                JSONObject main = forecast.getJSONObject("main");
+                double temperature = main.getDouble("temp") - 273.15; // Convert Kelvin to Celsius
+                JSONArray weatherArray = forecast.getJSONArray("weather");
+                JSONObject weather = weatherArray.getJSONObject(0);
+                String description = weather.getString("description");
+                String mainWeather = weather.getString("main");
+                double windSpeed = forecast.getJSONObject("wind").getDouble("speed");
+                int cloudsPercentage = forecast.getJSONObject("clouds").getInt("all");
+
+                System.out.printf("%-20s%-20.2f%-20s%-30s%-20.2f%-20d%n", dateTime, temperature, mainWeather, description, windSpeed, cloudsPercentage);
+            }
+        } catch (IOException | JSONException e) {
+            System.out.println("Error fetching data: " + e.getMessage());
+        }
     }
+
+    /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
 
     ////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////Check Air Quality////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
-    
+
     static void checkAirQuality() {
+        BufferedReader reader = null; // Initialize BufferedReader outside try block
         try {
-            BufferedReader reader;
             String line;
-            StringBuffer responseContent = new StringBuffer();
+            StringBuilder responseContent = new StringBuilder();
 
             System.out.print("Please enter latitude:");
-            reader = new BufferedReader(new InputStreamReader(System.in));
-            String latitude = reader.readLine();
+            String latitude = scanner.nextLine(); // Use nextLine() instead of readLine()
 
             System.out.print("Please enter longitude:");
-            String longitude = reader.readLine();
+            String longitude = scanner.nextLine(); // Use nextLine() instead of readLine()
 
-            reader.close();
 
             String apiKey = "7c1e8c40d3131a3931336096d8e2059f";
             String urlString = "http://api.openweathermap.org/data/2.5/air_pollution?lat=" + latitude + "&lon=" + longitude + "&appid=" + apiKey;
@@ -590,14 +655,15 @@ public class Main {
                 while ((line = reader.readLine()) != null) {
                     responseContent.append(line);
                 }
-                reader.close();
             } else {
                 reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
                 while ((line = reader.readLine()) != null) {
                     responseContent.append(line);
                 }
-                reader.close();
             }
+
+            // Close reader after reading response
+            reader.close();
 
             // Parsing JSON response
             JSONObject jsonObject = new JSONObject(responseContent.toString());
@@ -621,6 +687,15 @@ public class Main {
 
         } catch (IOException | JSONException e) {
             e.printStackTrace();
+        } finally {
+            // Ensure to close reader in finally block
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
