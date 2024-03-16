@@ -51,3 +51,8 @@ Following Use Cases are configured & working currently:
 The Project is Implemented as follows :
 - Java for the Terminal Part
 - Java Swing for Desktop Application Part.
+
+## HOW TO RUN IN TERMINAL
+- Open any Java Compiler (This one is built in IntelliJ)
+- One by one add all libraries in lib folder to build path
+- Execute the Code
