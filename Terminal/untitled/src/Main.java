@@ -791,6 +791,8 @@ public class Main {
             System.out.println("Error saving weather data to database: " + e.getMessage());
         }
     }
+
+
     static void saveUserDataToFile() {
         // Save user data to text file
         try {
