@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.sql.*;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -876,16 +877,16 @@ class WeatherData {
         this.timeZone = timeZone;
     }
 
-    public long getSunriseTime() {
-        return sunriseTime;
+    public String getSunriseTime() {
+        return formatTime(sunriseTime);
     }
 
     public void setSunriseTime(long sunriseTime) {
         this.sunriseTime = sunriseTime;
     }
 
-    public long getSunsetTime() {
-        return sunsetTime;
+    public String getSunsetTime() {
+        return formatTime(sunsetTime);
     }
 
     public void setSunsetTime(long sunsetTime) {
@@ -908,11 +909,17 @@ class WeatherData {
         this.feelsLike = feelsLike;
     }
 
-    public long getFetchingTime() {
-        return fetchingTime;
+    public String getFetchingTime() {
+        return formatTime(fetchingTime);
     }
 
     public void setFetchingTime(long fetchingTime) {
         this.fetchingTime = fetchingTime;
+    }
+
+    private String formatTime(long timestamp) {
+        Date date = new Date(timestamp * 1000L);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+        return sdf.format(date);
     }
 }

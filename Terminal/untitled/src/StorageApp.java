@@ -13,17 +13,19 @@ import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 public class StorageApp extends JFrame {
     private JComboBox<String> storageOptions;
-    private JPanel mainPanel, sidebarPanel, loginPanel, loggedInPanel, addLocationPanel, checkAirQualityPanel, viewWeatherByLongLatPanel, viewWeatherByCityCountryPanel;
+    private JPanel mainPanel, sidebarPanel, loginPanel, loggedInPanel, addLocationPanel, checkAirQualityPanel, viewWeatherByLongLatPanel, viewWeatherByCityCountryPanel, showForecastPanel;
     private JTextField latitudeField, longitudeField, cityOrCountryField;
+    private JTextField latitudeFieldForecast, longitudeFieldForecast;
     private JTextField usernameField;
     private JTextField latitudeFieldAQ, longitudeFieldAQ;
     private JTextField latitudeFieldWL, longitudeFieldWL;
 
     private JPasswordField passwordField;
-    private JButton loginButton, registerButton, addLocationButton, checkAirQualityButton, viewWeatherByLongLatButton, viewWeatherButton;
+    private JButton loginButton, registerButton, addLocationButton, checkAirQualityButton, viewWeatherByLongLatButton, viewWeatherButton, showForecastButton;
     private JLabel loggedInLabel;
     private String selectedStorage;
 
@@ -39,13 +41,17 @@ public class StorageApp extends JFrame {
         storageOptions.setSelectedIndex(0);
         selectedStorage = storageOptionsArray[0]; // Initialize selectedStorage
         JPanel topPanel = new JPanel();
+        JButton homeButton = new JButton("Home");
+        topPanel.add(homeButton);
         topPanel.add(storageOptions);
         add(topPanel, BorderLayout.NORTH);
 
         // Login/Register panel
         loginPanel = new JPanel(new GridLayout(3, 2));
         usernameField = new JTextField();
+        usernameField.setColumns(20);
         passwordField = new JPasswordField();
+        passwordField.setColumns(20);
         loginButton = new JButton("Login");
         registerButton = new JButton("Register");
         latitudeFieldAQ = new JTextField();
@@ -62,6 +68,8 @@ public class StorageApp extends JFrame {
         addLocationPanel = new JPanel(new GridLayout(4, 2));
         latitudeField = new JTextField();
         longitudeField = new JTextField();
+        longitudeField.setColumns(20);
+        latitudeField.setColumns(20);
         addLocationButton = new JButton("Add Location");
         viewWeatherByLongLatButton = new JButton("View Weather");
 
@@ -102,6 +110,17 @@ public class StorageApp extends JFrame {
         viewWeatherByCityCountryPanel.add(new JLabel("Enter City/Country:"));
         viewWeatherByCityCountryPanel.add(cityOrCountryField);
         viewWeatherByCityCountryPanel.add(viewWeatherButton);
+
+        showForecastPanel = new JPanel(new GridLayout(3, 2));
+        latitudeFieldForecast = new JTextField();
+        longitudeFieldForecast = new JTextField();
+        showForecastButton = new JButton("Show Forecast");
+
+        showForecastPanel.add(new JLabel("Latitude:"));
+        showForecastPanel.add(latitudeFieldForecast);
+        showForecastPanel.add(new JLabel("Longitude:"));
+        showForecastPanel.add(longitudeFieldForecast);
+        showForecastPanel.add(showForecastButton);
 
         // Logged-in panel
         loggedInPanel = new JPanel(new BorderLayout());
@@ -160,6 +179,15 @@ public class StorageApp extends JFrame {
             }
         });
 
+        showForecastButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                double latitude = Double.parseDouble(latitudeFieldForecast.getText());
+                double longitude = Double.parseDouble(longitudeFieldForecast.getText());
+                showForecast(latitude, longitude);
+            }
+        });
+
         for (JButton button : sidebarButtons) {
             button.addActionListener(new ActionListener() {
                 @Override
@@ -190,6 +218,16 @@ public class StorageApp extends JFrame {
                             mainPanel.revalidate();
                             mainPanel.repaint();
                             break;
+                        case "Show 5 Days Forecast":
+                            mainPanel.removeAll();
+                            mainPanel.add(showForecastPanel);
+                            mainPanel.revalidate();
+                            mainPanel.repaint();
+                            break;
+                        case "Show Current Weather":
+                            JOptionPane.showMessageDialog(null, "To View Current Weather, Go To View By Lat/Long> New Location");
+                            break;
+
                         default:
                             // Perform other actions based on the clicked button
                             break;
@@ -238,6 +276,24 @@ public class StorageApp extends JFrame {
             }
         });
 
+        homeButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (loggedInLabel.getText().contains("Logged In")) {
+                    mainPanel.removeAll();
+                    mainPanel.add(loggedInPanel);
+                    mainPanel.revalidate();
+                    mainPanel.repaint();
+                } else {
+                    mainPanel.removeAll();
+                    mainPanel.add(loginPanel);
+                    mainPanel.revalidate();
+                    mainPanel.repaint();
+                }
+            }
+        });
+
+
         registerButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -251,17 +307,6 @@ public class StorageApp extends JFrame {
                 }
             }
         });
-
-        for (JButton button : sidebarButtons) {
-            button.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    String actionCommand = e.getActionCommand();
-                    // Perform action based on the clicked button
-                    JOptionPane.showMessageDialog(null, "Performing action: " + actionCommand);
-                }
-            });
-        }
     }
 
     private boolean loginFromFile(String username, String password) {
@@ -667,6 +712,59 @@ public class StorageApp extends JFrame {
     }
 
 
+    private void showForecast(double latitude, double longitude) {
+        try {
+            String apiKey = "10b4e9d130091b96f0775edc59e7ee11";
+            URL url = new URL("https://api.openweathermap.org/data/2.5/forecast?lat=" + latitude + "&lon=" + longitude + "&appid=" + apiKey);
+
+            Scanner apiScanner = new Scanner(url.openStream());
+            StringBuilder jsonBuilder = new StringBuilder();
+
+            while (apiScanner.hasNext()) {
+                jsonBuilder.append(apiScanner.nextLine());
+            }
+            apiScanner.close();
+
+            JSONObject json = new JSONObject(jsonBuilder.toString());
+            JSONArray forecastList = json.getJSONArray("list");
+            String placeName = json.getJSONObject("city").getString("name");
+
+            // Create a JTextArea to display the forecast information
+            JTextArea forecastTextArea = new JTextArea();
+            forecastTextArea.setEditable(false);
+            forecastTextArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+
+            // Append forecast information to the JTextArea
+            forecastTextArea.append("Showing 5 days forecast for " + placeName + " (Latitude: " + latitude + ", Longitude: " + longitude + ")\n");
+            forecastTextArea.append("-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
+            forecastTextArea.append(String.format("%-20s%-20s%-20s%-30s%-20s%-20s%n", "Date/Time", "Temperature (C)", "Weather", "Wind Speed (m/s)", "Clouds (%)", "Description"));
+            forecastTextArea.append("-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
+
+            for (int i = 0; i < forecastList.length(); i++) {
+                JSONObject forecast = forecastList.getJSONObject(i);
+                String dateTime = forecast.getString("dt_txt");
+                JSONObject main = forecast.getJSONObject("main");
+                double temperature = main.getDouble("temp") - 273.15; // Convert Kelvin to Celsius
+                JSONArray weatherArray = forecast.getJSONArray("weather");
+                JSONObject weather = weatherArray.getJSONObject(0);
+                String description = weather.getString("description");
+                String mainWeather = weather.getString("main");
+                double windSpeed = forecast.getJSONObject("wind").getDouble("speed");
+                int cloudsPercentage = forecast.getJSONObject("clouds").getInt("all");
+
+                forecastTextArea.append(String.format("%-20s%-20.2f%-20s%-20.2f%-20d%-30s%n", dateTime, temperature, mainWeather, windSpeed, cloudsPercentage, description));
+            }
+
+            // Create a JScrollPane to contain the JTextArea
+            JScrollPane scrollPane = new JScrollPane(forecastTextArea);
+
+            // Show the forecast information in a JOptionPane with a scrollable JTextArea
+            JOptionPane.showMessageDialog(null, scrollPane, "5-Day Forecast", JOptionPane.PLAIN_MESSAGE);
+
+        } catch (IOException | JSONException e) {
+            JOptionPane.showMessageDialog(null, "Error fetching data: " + e.getMessage());
+        }
+    }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {
