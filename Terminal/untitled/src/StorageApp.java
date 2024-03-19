@@ -10,15 +10,20 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.sql.*;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
 
 public class StorageApp extends JFrame {
     private JComboBox<String> storageOptions;
-    private JPanel mainPanel, sidebarPanel, loginPanel, loggedInPanel, addLocationPanel, checkAirQualityPanel;
-    private JTextField latitudeField, longitudeField;;
+    private JPanel mainPanel, sidebarPanel, loginPanel, loggedInPanel, addLocationPanel, checkAirQualityPanel, viewWeatherByLongLatPanel, viewWeatherByCityCountryPanel;
+    private JTextField latitudeField, longitudeField, cityOrCountryField;
     private JTextField usernameField;
     private JTextField latitudeFieldAQ, longitudeFieldAQ;
+    private JTextField latitudeFieldWL, longitudeFieldWL;
+
     private JPasswordField passwordField;
-    private JButton loginButton, registerButton, addLocationButton, checkAirQualityButton;
+    private JButton loginButton, registerButton, addLocationButton, checkAirQualityButton, viewWeatherByLongLatButton, viewWeatherButton;
     private JLabel loggedInLabel;
     private String selectedStorage;
 
@@ -58,6 +63,7 @@ public class StorageApp extends JFrame {
         latitudeField = new JTextField();
         longitudeField = new JTextField();
         addLocationButton = new JButton("Add Location");
+        viewWeatherByLongLatButton = new JButton("View Weather");
 
         addLocationPanel.add(new JLabel("Latitude:"));
         addLocationPanel.add(latitudeField);
@@ -75,6 +81,27 @@ public class StorageApp extends JFrame {
         checkAirQualityPanel.add(new JLabel("Longitude:"));
         checkAirQualityPanel.add(longitudeFieldAQ);
         checkAirQualityPanel.add(checkAirQualityButton);
+
+        viewWeatherByLongLatPanel = new JPanel(new GridLayout(2, 2));
+        latitudeFieldWL = new JTextField();
+        longitudeFieldWL = new JTextField();
+        viewWeatherByLongLatButton = new JButton("View Weather");
+
+
+        viewWeatherByLongLatPanel = new JPanel(new GridLayout(2, 2));
+        viewWeatherByLongLatPanel.add(new JLabel("Latitude:"));
+        viewWeatherByLongLatPanel.add(latitudeFieldWL);
+        viewWeatherByLongLatPanel.add(new JLabel("Longitude:"));
+        viewWeatherByLongLatPanel.add(longitudeFieldWL);
+        viewWeatherByLongLatPanel.add(viewWeatherByLongLatButton);
+
+        viewWeatherByCityCountryPanel = new JPanel(new GridLayout(3, 2));
+        cityOrCountryField = new JTextField();
+        viewWeatherButton = new JButton("View Weather");
+
+        viewWeatherByCityCountryPanel.add(new JLabel("Enter City/Country:"));
+        viewWeatherByCityCountryPanel.add(cityOrCountryField);
+        viewWeatherByCityCountryPanel.add(viewWeatherButton);
 
         // Logged-in panel
         loggedInPanel = new JPanel(new BorderLayout());
@@ -116,6 +143,23 @@ public class StorageApp extends JFrame {
             }
         });
 
+        viewWeatherByLongLatButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                double latitude = Double.parseDouble(latitudeFieldWL.getText());
+                double longitude = Double.parseDouble(longitudeFieldWL.getText());
+                viewWeatherByLongLat(latitude, longitude);
+            }
+        });
+
+        viewWeatherButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String cityOrCountry = cityOrCountryField.getText();
+                viewWeatherByCityCountry(cityOrCountry);
+            }
+        });
+
         for (JButton button : sidebarButtons) {
             button.addActionListener(new ActionListener() {
                 @Override
@@ -131,6 +175,18 @@ public class StorageApp extends JFrame {
                         case "Check Air Quality":
                             mainPanel.removeAll();
                             mainPanel.add(checkAirQualityPanel);
+                            mainPanel.revalidate();
+                            mainPanel.repaint();
+                            break;
+                        case "View Weather by Long/Lat":
+                            mainPanel.removeAll();
+                            mainPanel.add(viewWeatherByLongLatPanel);
+                            mainPanel.revalidate();
+                            mainPanel.repaint();
+                            break;
+                        case "View Weather by City/Country":
+                            mainPanel.removeAll();
+                            mainPanel.add(viewWeatherByCityCountryPanel);
                             mainPanel.revalidate();
                             mainPanel.repaint();
                             break;
@@ -393,6 +449,223 @@ public class StorageApp extends JFrame {
             JOptionPane.showMessageDialog(null, "Error checking air quality: " + e.getMessage());
         }
     }
+
+    private void viewWeatherByLongLat(double latitude, double longitude) {
+        try {
+            URL url = new URL("https://api.openweathermap.org/data/2.5/weather?lat=" + latitude + "&lon=" + longitude + "&appid=fb2e59cfc6024b27f5cd9bd935de4f5d");
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            int responseCode = connection.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                String inputLine;
+                StringBuilder response = new StringBuilder();
+                while ((inputLine = in.readLine()) != null) {
+                    response.append(inputLine);
+                }
+                in.close();
+
+                // Parse JSON response
+                JSONObject jsonObject = new JSONObject(response.toString());
+                String cityName = jsonObject.getString("name");
+                String countryCode = jsonObject.getJSONObject("sys").getString("country");
+                double temperature = jsonObject.getJSONObject("main").getDouble("temp");
+                double feelsLike = jsonObject.getJSONObject("main").getDouble("feels_like");
+                String description = jsonObject.getJSONArray("weather").getJSONObject(0).getString("description");
+                long visibility = jsonObject.getLong("visibility");
+                long sunriseTime = jsonObject.getJSONObject("sys").getLong("sunrise");
+                long sunsetTime = jsonObject.getJSONObject("sys").getLong("sunset");
+                long timeZone = jsonObject.getLong("timezone");
+                double pressure = jsonObject.getJSONObject("main").getDouble("pressure");
+                double humidity = jsonObject.getJSONObject("main").getDouble("humidity");
+                double windSpeed = jsonObject.getJSONObject("wind").getDouble("speed");
+                double windDegree = jsonObject.getJSONObject("wind").getDouble("deg");
+                double clouds = jsonObject.getJSONObject("clouds").getDouble("all");
+
+                // Format sunrise and sunset time
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                java.util.Date sunriseDate = new java.util.Date(sunriseTime * 1000);
+                java.util.Date sunsetDate = new java.util.Date(sunsetTime * 1000);
+                String formattedSunriseTime = sdf.format(sunriseDate);
+                String formattedSunsetTime = sdf.format(sunsetDate);
+
+                // Display weather details
+                String message = "Location: " + cityName + ", " + countryCode + "\n";
+                message += "Temperature: " + temperature + " K\n";
+                message += "Feels Like: " + feelsLike + " K\n";
+                message += "Description: " + description + "\n";
+                message += "Visibility: " + visibility + " meters\n";
+                message += "Sunrise Time: " + formattedSunriseTime + "\n";
+                message += "Sunset Time: " + formattedSunsetTime + "\n";
+                message += "Timezone: " + timeZone + "\n";
+                message += "Pressure: " + pressure + " hPa\n";
+                message += "Humidity: " + humidity + "%\n";
+                message += "Wind Speed: " + windSpeed + " m/s\n";
+                message += "Wind Degree: " + windDegree + "°\n";
+                message += "Cloudiness: " + clouds + "%";
+
+                JOptionPane.showMessageDialog(null, message);
+            } else {
+                JOptionPane.showMessageDialog(null, "Error fetching weather data. Response code: " + responseCode);
+            }
+        } catch (IOException | JSONException e) {
+            JOptionPane.showMessageDialog(null, "Error fetching weather data: " + e.getMessage());
+        }
+    }
+
+
+    private void viewWeatherByCityCountry(String cityOrCountry) {
+        List<WeatherData> weatherDataList = retrieveWeatherDataByCityCountry(cityOrCountry);
+        displayWeatherData(weatherDataList);
+    }
+
+    private List<WeatherData> retrieveWeatherDataByCityCountry(String cityOrCountry) {
+        List<WeatherData> weatherDataList = new ArrayList<>();
+        if (selectedStorage.equals("Text File Storage")) {
+            weatherDataList = retrieveFromTextFile(cityOrCountry);
+        } else if (selectedStorage.equals("SQLite Storage")) {
+            weatherDataList = retrieveFromDatabase(cityOrCountry);
+        } else {
+            JOptionPane.showMessageDialog(null, "Invalid storage choice.");
+        }
+        return weatherDataList;
+    }
+
+    // Implement the method to retrieve weather data from text file
+    private List<WeatherData> retrieveFromTextFile(String searchKey) {
+        List<WeatherData> weatherDataList = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(new FileReader("weather_data.txt"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length >= 8) {
+                    String cityName = parts[0];
+                    String countryCode = parts[1];
+                    int timeZone = Integer.parseInt(parts[2]);
+                    long sunriseTime = Long.parseLong(parts[3]);
+                    long sunsetTime = Long.parseLong(parts[4]);
+                    String description = parts[5];
+                    double feelsLike = Double.parseDouble(parts[6]);
+                    long fetchingTime = Long.parseLong(parts[7]);
+                    if (cityName.equalsIgnoreCase(searchKey) || countryCode.equalsIgnoreCase(searchKey)) {
+                        WeatherData weatherData = new WeatherData(cityName, countryCode, timeZone, sunriseTime, sunsetTime, description, feelsLike, fetchingTime);
+                        weatherDataList.add(weatherData);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return weatherDataList;
+    }
+
+    // Retrieve weather data from database
+    private List<WeatherData> retrieveFromDatabase(String searchKey) {
+        List<WeatherData> weatherDataList = new ArrayList<>();
+        try (Connection connection = DriverManager.getConnection("jdbc:sqlite:weather_data.db")) {
+            String sql = "SELECT * FROM weather_data WHERE city_name LIKE ? OR country_code LIKE ?";
+            PreparedStatement statement = connection.prepareStatement(sql);
+            statement.setString(1, "%" + searchKey + "%");
+            statement.setString(2, "%" + searchKey + "%");
+            ResultSet resultSet = statement.executeQuery();
+            while (resultSet.next()) {
+                String cityName = resultSet.getString("city_name");
+                String countryCode = resultSet.getString("country_code");
+                int timeZone = resultSet.getInt("time_zone");
+                long sunriseTime = resultSet.getLong("sunrise_time");
+                long sunsetTime = resultSet.getLong("sunset_time");
+                String description = resultSet.getString("description");
+                double feelsLike = resultSet.getDouble("feels_like");
+                long fetchingTime = resultSet.getLong("fetching_time");
+                WeatherData weatherData = new WeatherData(cityName, countryCode, timeZone, sunriseTime, sunsetTime, description, feelsLike, fetchingTime);
+                weatherDataList.add(weatherData);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return weatherDataList;
+    }
+
+    // Display weather data in a dialog
+    private void displayWeatherData(List<WeatherData> weatherDataList) {
+        StringBuilder message = new StringBuilder();
+        if (weatherDataList.isEmpty()) {
+            message.append("No weather data found.");
+        } else {
+            for (WeatherData weatherData : weatherDataList) {
+                message.append("City: ").append(weatherData.getCityName()).append("\n");
+                message.append("Country Code: ").append(weatherData.getCountryCode()).append("\n");
+                message.append("Time Zone: ").append(weatherData.getTimeZone()).append("\n");
+                message.append("Sunrise Time: ").append(weatherData.getSunriseTime()).append("\n");
+                message.append("Sunset Time: ").append(weatherData.getSunsetTime()).append("\n");
+                message.append("Description: ").append(weatherData.getDescription()).append("\n");
+                message.append("Feels Like: ").append(weatherData.getFeelsLike()).append("\n");
+                message.append("Fetching Time: ").append(weatherData.getFetchingTime()).append("\n\n");
+            }
+        }
+        JOptionPane.showMessageDialog(null, message.toString());
+    }
+
+    private static class WeatherData {
+        private final String cityName;
+        private final String countryCode;
+        private final int timeZone;
+        private final long sunriseTime;
+        private final long sunsetTime;
+        private final String description;
+        private final double feelsLike;
+        private final long fetchingTime;
+
+        public WeatherData(String cityName, String countryCode, int timeZone, long sunriseTime, long sunsetTime, String description, double feelsLike, long fetchingTime) {
+            this.cityName = cityName;
+            this.countryCode = countryCode;
+            this.timeZone = timeZone;
+            this.sunriseTime = sunriseTime;
+            this.sunsetTime = sunsetTime;
+            this.description = description;
+            this.feelsLike = feelsLike;
+            this.fetchingTime = fetchingTime;
+        }
+
+        public String getCityName() {
+            return cityName;
+        }
+
+        public String getCountryCode() {
+            return countryCode;
+        }
+
+        public int getTimeZone() {
+            return timeZone;
+        }
+
+        public String getSunriseTime() {
+            return formatTime(sunriseTime);
+        }
+
+        public String getSunsetTime() {
+            return formatTime(sunsetTime);
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public double getFeelsLike() {
+            return feelsLike;
+        }
+
+        public long getFetchingTime() {
+            return fetchingTime;
+        }
+
+        private String formatTime(long timestamp) {
+            Date date = new Date(timestamp * 1000L);
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+            return sdf.format(date);
+        }
+    }
+
 
 
     public static void main(String[] args) {
